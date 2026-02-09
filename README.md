@@ -10,6 +10,10 @@ Projekt jest w trakcie realizacji – część funkcjonalności została już wd
 
 ## 2. Architektura systemu
 
+
+![Schemat Architektury Systemu](diagramProject.drawio%20(1).png)
+
+
 ### 2.1 Warstwa fizyczna i wirtualizacja
 
 * Komputer fizyczny (PC) pełni rolę hosta.
