@@ -11,7 +11,7 @@ Projekt jest w trakcie realizacji – część funkcjonalności została już wd
 ## 2. Architektura systemu
 
 
-![Schemat Architektury Systemu](diagram_no_outer_background.png)
+![Schemat Architektury Systemu](diagram.png)
 
 
 ### 2.1 Warstwa fizyczna i wirtualizacja
