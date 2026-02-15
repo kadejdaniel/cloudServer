@@ -6,10 +6,10 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./data:/srv
-      - ./db/filebrowser.db:/database.db
-      - ./config/settings.json:/config/settings.json
-   
+      - ./filebrowser/data:/srv
+      - ./filebrowser/db/filebrowser.db:/database.db
+      - ./filebrowser/config/settings.json:/config/settings.json
+
     command: ["--address", "0.0.0.0", "--port", "80", "--database", "/database.db"]
     restart: unless-stopped
 
@@ -22,7 +22,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro # To pozwala Portainerowi sterować Dockerem
-      - ./portainer_data:/data
+      - ./portainer/data:/data
     ports:
       - "9443:9443"
 
@@ -54,9 +54,17 @@ services:
 
   grafana:
     image: grafana/grafana:latest
+    environment:
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=77daniel.kontakt@gmail.com
+      - GF_SMTP_PASSWORD=rsgednlhnzxobyab
+      - GF_SMTP_FROM_ADDRESS=77daniel.kontakt@gmail.com
+      - GF_SMTP_FROM_NAME=Cloud Server
+
     container_name: grafana
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana:/var/lib/grafana
+      - ./monitoring/grafana:/var/lib/grafana
