@@ -1,188 +1,89 @@
-# Serwer plików z monitoringiem
+# Private Cloud File Server with Monitoring
 
-## 1. Wprowadzenie
-
-Celem projektu jest stworzenie prywatnego serwera plików umożliwiającego bezpieczne przechowywanie danych oraz monitorowanie zasobów systemowych. System działa w środowisku wirtualnym i oparty jest na konteneryzacji usług przy użyciu Dockera.
-
-Projekt stanowi w pełni działające środowisko serwerowe dostępne w sieci lokalnej.
+> Self-hosted file server with system monitoring using Docker
 
 ---
 
-## 2. Architektura systemu
+## Overview
 
-![Schemat Architektury Systemu](diagram.png)
+This project provides a private cloud file server running in a virtualized environment with built-in system monitoring.
 
-Poniżej przedstawiona jest rzeczywista struktura katalogów projektu na serwerze:
+The system is based on Docker containers and is accessible within a local network.
+
+---
+
+## Features
+
+* File management via web interface (FileBrowser)
+* Container management (Portainer)
+* System monitoring (Prometheus + Grafana)
+* Remote access via SSH
+* Persistent data using Docker volumes
+* Easy deployment with Docker Compose
+
+---
+
+## Architecture
+
+![Architecture Diagram](diagram.png)
+
+---
+
+## Repository Structure
 
 ```
-private-cloud/
-│
+.
 ├── docker-compose.yml
 ├── .gitignore
 ├── README.md
-│
 ├── filebrowser/
-│   ├── data/                # pliki użytkowników
+│   ├── data/
 │   ├── db/
-│   │   └── filebrowser.db   # baza danych FileBrowser
+│   │   └── filebrowser.db
 │   └── config/
-│       └── settings.json    # konfiguracja FileBrowser
-│
+│       └── settings.json
 ├── portainer/
-│   └── data/                # dane i konfiguracja Portainera
-│
+│   └── data/
 └── monitoring/
     ├── prometheus/
-    │   └── prometheus.yml   # konfiguracja Prometheusa
-    └── grafana/             # dane Grafany (dashboardy, alerty)
+    │   └── prometheus.yml
+    └── grafana/
 ```
 
+---
 
-### 2.1 Warstwa fizyczna i wirtualizacja
+## Tech Stack
 
-- Komputer fizyczny (PC) pełni rolę hosta.
-- Na hoście uruchomiono środowisko wirtualizacji **VirtualBox**.
-- W VirtualBox działa maszyna wirtualna z systemem **Ubuntu Server 24.04 LTS**.
-- Karta sieciowa maszyny wirtualnej skonfigurowana jest w trybie **mostkowanym (Bridged)**, dzięki czemu serwer jest widoczny w sieci lokalnej jako niezależne urządzenie.
-
-### 2.2 System operacyjny
-
-- Ubuntu Server 24.04 LTS  
-- System pełni rolę hosta dla kontenerów Dockera oraz środowiska do zarządzania usługami.
+* Ubuntu Server 24.04 LTS
+* Docker & Docker Compose
+* VirtualBox
+* Prometheus
+* Grafana
+* FileBrowser
+* Portainer
 
 ---
 
-## 3. Zdalny dostęp
+## Getting Started
 
-- Zainstalowano i skonfigurowano **OpenSSH Server**.
-- Dostęp do serwera możliwy jest:
-  - z komputera (SSH),
-  - z telefonu przy użyciu aplikacji **Termius**.
-- Umożliwia to pełne zarządzanie serwerem bez fizycznego dostępu do maszyny.
+### 1. Requirements
 
----
+* Docker
+* Docker Compose
 
-## 4. Konteneryzacja
-
-### 4.1 Docker Engine
-
-Docker Engine odpowiada za:
-
-- uruchamianie i zatrzymywanie kontenerów,
-- zarządzanie obrazami,
-- obsługę sieci i wolumenów.
-
-Kontenery wykorzystują zasoby systemu hosta i nie posiadają własnej niezależnej pamięci ani dysku.
-
-### 4.2 Docker Compose
-
-Docker Compose umożliwia definiowanie i uruchamianie wielu usług jednocześnie przy użyciu pliku `docker-compose.yml`.
-
-Projekt oparty jest o Docker Compose, który uruchamia wszystkie usługi jedną komendą.
-
----
-
-# Konfiguracja Docker Compose
-
-Poniżej znajduje się pełna konfiguracja usług uruchamianych w projekcie.
-
-````yaml
-services:
-
-  filebrowser:
-    image: filebrowser/filebrowser:latest
-    container_name: filebrowser
-    user: "0:0"
-    ports:
-      - "8080:80"
-    volumes:
-      - ./filebrowser/data:/srv
-      - ./filebrowser/db/filebrowser.db:/database.db
-      - ./filebrowser/config/settings.json:/config/settings.json
-    command:
-      [
-        "--address", "0.0.0.0",
-        "--port", "80",
-        "--database", "/database.db"
-      ]
-    restart: unless-stopped
-
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: always
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./portainer/data:/data
-    ports:
-      - "9443:9443"
-
-
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - "--path.procfs=/host/proc"
-      - "--path.sysfs=/host/sys"
-      - "--path.rootfs=/rootfs"
-
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    depends_on:
-      - node-exporter
-
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SMTP_ENABLED=true
-      - GF_SMTP_HOST=smtp.gmail.com:587
-      - GF_SMTP_USER=twoj_email@gmail.com
-      - GF_SMTP_PASSWORD=haslo_aplikacji
-      - GF_SMTP_FROM_ADDRESS=twoj_email@gmail.com
-      - GF_SMTP_FROM_NAME=Cloud Server
-    volumes:
-      - ./monitoring/grafana:/var/lib/grafana
-
-````
-
-## Jak uruchomić 
-
-W katalogu projektu:
+### 2. Run the project
 
 ```bash
 docker compose up -d
 ```
 
-Sprawdzenie statusu kontenerów:
+### 3. Check containers
 
 ```bash
 docker ps
 ```
 
-Zatrzymanie projektu:
+### 4. Stop the project
 
 ```bash
 docker compose down
@@ -190,120 +91,85 @@ docker compose down
 
 ---
 
-## Dostęp do usług
+## Services
 
-| Usługa        | Adres                         |
-|--------------|--------------------------------|
-| FileBrowser  | http://IP_SERWERA:8080         |
-| Portainer    | https://IP_SERWERA:9443        |
-| Prometheus   | http://IP_SERWERA:9090         |
-| Grafana      | http://IP_SERWERA:3000         |
-| Node Exporter| http://IP_SERWERA:9100/metrics |
-
-
-## 5. Usługi uruchomione w Dockerze
-
-### 5.1 FileBrowser
-
-FileBrowser zapewnia graficzny interfejs webowy do zarządzania plikami na serwerze.
-
-Funkcje:
-
-- przesyłanie plików z komputera do serwera,
-- zarządzanie katalogami i plikami,
-- dostęp przez przeglądarkę w sieci LAN.
-
-Dane zapisywane są w wolumenach Dockera, co zapewnia ich trwałość po restarcie kontenera lub systemu.
+| Service       | URL                           |
+| ------------- | ----------------------------- |
+| FileBrowser   | http://SERVER_IP:8080         |
+| Portainer     | https://SERVER_IP:9443        |
+| Prometheus    | http://SERVER_IP:9090         |
+| Grafana       | http://SERVER_IP:3000         |
+| Node Exporter | http://SERVER_IP:9100/metrics |
 
 ---
 
-### 5.2 Portainer
+## Services Description
 
-Portainer umożliwia graficzne zarządzanie kontenerami Dockera.
+### FileBrowser
 
-Umożliwia:
+Web-based file manager that allows:
 
-- podgląd uruchomionych kontenerów,
-- zarządzanie obrazami i wolumenami,
-- start i stop usług bez użycia linii poleceń.
-
-Wybrane parametry konfiguracji:
-
-- `restart: always` – automatyczny restart po restarcie systemu,
-- `security_opt: no-new-privileges:true` – blokada eskalacji uprawnień.
+* uploading and downloading files
+* managing directories
+* browser-based access
 
 ---
 
-## 6. Monitoring systemu
+### Portainer
 
-### 6.1 Node Exporter
+Docker management UI:
 
-Node Exporter zbiera dane o stanie systemu, m.in.:
-
-- użycie CPU,
-- pamięć RAM,
-- przestrzeń dyskową.
-
-Metryki dostępne są pod adresem:
-
-```
-http://localhost:9100/metrics
-```
+* container monitoring
+* image and volume management
+* start/stop services
 
 ---
 
-### 6.2 Prometheus
+### Monitoring Stack
 
-Prometheus pobiera dane z Node Exportera i zapisuje je w swojej bazie danych.
+#### Node Exporter
 
-Interfejs webowy:
+Collects system metrics:
 
-
-
-```
-http://localhost:9090
-```
+* CPU usage
+* RAM usage
+* disk usage
 
 ---
 
-### 6.3 Grafana
+#### Prometheus
 
-Grafana służy do wizualizacji danych dostarczanych przez Prometheusa.
+* collects metrics from Node Exporter
+* stores time-series data
 
-Umożliwia:
+---
 
-- tworzenie dashboardów,
-- analizę zużycia zasobów w czasie rzeczywistym.
+#### Grafana
 
-Interfejs webowy:
+* visualizes metrics
+* dashboards and monitoring
 
+---
 
+## Environment
 
-```
-http://localhost:3000
-```
+* Virtual machine running on VirtualBox
+* Ubuntu Server 24.04 LTS
+* Bridged network (server visible in LAN)
+* Remote access via SSH (e.g. Termius)
+
+---
+
+## Project Status
+
+✔ Fully functional
+✔ All services deployed via Docker
+✔ Monitoring operational
 
 ---
 
 
----
+## Summary
 
-## 7. Stan projektu
-
-### Zrealizowane elementy
-
-- instalacja Ubuntu Server 24.04 LTS,
-- konfiguracja VirtualBox i sieci mostkowanej,
-- instalacja i konfiguracja OpenSSH,
-- dostęp z komputera i telefonu,
-- instalacja Dockera i Docker Compose,
-- uruchomienie FileBrowsera,
-- instalacja Portainera,
-- konfiguracja monitoringu: Node Exporter, Prometheus, Grafana.
-
----
-
-## 8. Podsumowanie
-
-Projekt stanowi kompletną bazę pod prywatny serwer plików działający w sieci lokalnej z funkcją monitoringu zasobów systemowych. Zastosowanie wirtualizacji oraz konteneryzacji pozwala na łatwe zarządzanie środowiskiem oraz jego dalszą rozbudowę.
-
+This project demonstrates a complete self-hosted cloud solution with monitoring capabilities.
+It is designed for local network usage and can be easily extended.
