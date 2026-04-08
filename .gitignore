@@ -1,0 +1,16 @@
+# Docker volumes / dane
+data/
+db/
+portainer_data/
+grafana/
+monitoring/grafana/
+
+# Backupy
+backups/
+
+# Pliki tymczasowe
+*.log
+*.tmp
+
+# System
+.DS_Store

@@ -1,0 +1,71 @@
+services:
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    user: "0:0"
+    ports:
+      - "8080:80"
+    volumes:
+      - ./filebrowser/data:/srv
+      - ./filebrowser/db/filebrowser.db:/database.db
+      - ./filebrowser/config/settings.json:/config/settings.json
+
+    command:
+      ["--address", "0.0.0.0", "--port", "80", "--database", "/database.db"]
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro # To pozwala Portainerowi sterować Dockerem
+      - ./portainer/data:/data
+    ports:
+      - "9443:9443"
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - node-exporter
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=@gmail
+      - GF_SMTP_PASSWORD=
+      - GF_SMTP_FROM_ADDRESS=
+      - GF_SMTP_FROM_NAME=Cloud Server
+
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana:/var/lib/grafana
