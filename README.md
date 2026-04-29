@@ -60,7 +60,7 @@ System (CPU, RAM, disk)
 ├── .env                        # secrets (not in repo)
 ├── filebrowser/
 │   ├── config/settings.json
-│   ├── data/                   # your files
+│   ├── data/                   
 │   └── db/
 ├── monitoring/
 │   ├── prometheus/
