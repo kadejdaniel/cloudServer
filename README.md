@@ -18,7 +18,16 @@ A personal home server for file storage, system monitoring, and automated backup
 
 ## Architecture
 
-![System Architecture](diagram_no_outer_background.png)
+![System Architecture](assets/diagram_no_outer_background.png)
+
+---
+
+## Screenshots
+
+### Grafana – monitoring dashboard
+![Grafana Dashboard](assets/grafana-dashboard.png)
+
+---
 
 ## How it's set up
 
@@ -58,9 +67,10 @@ System (CPU, RAM, disk)
 .
 ├── docker-compose.yml
 ├── .env                        # secrets (not in repo)
+├── assets/                     # diagrams and screenshots
 ├── filebrowser/
 │   ├── config/settings.json
-│   ├── data/                   
+│   ├── data/
 │   └── db/
 ├── monitoring/
 │   ├── prometheus/
@@ -78,12 +88,15 @@ System (CPU, RAM, disk)
 
 1. Clone the repo
 2. Create a `.env` file with your credentials:
+
 ```env
 GF_SMTP_USER=your@email.com
 GF_SMTP_PASSWORD=your_password
 GF_SMTP_FROM_ADDRESS=your@email.com
 ```
+
 3. Start everything:
+
 ```bash
 docker compose up -d
 ```
