@@ -1,216 +1,106 @@
-# Projekt: Serwer plików z automatycznym backupem i monitoringiem
+# Home Cloud Server
 
-## 1. Wprowadzenie
+A personal home server for file storage, system monitoring, and automated backups. Built with Docker on a Ubuntu Server VM running inside VirtualBox.
 
-Celem projektu jest stworzenie serwera plików umożliwiającego bezpieczne przechowywanie danych, automatyczne wykonywanie kopii zapasowych oraz monitorowanie zasobów systemowych wraz z powiadomieniami o ich stanie. Projekt realizowany jest w środowisku wirtualnym i opiera się na konteneryzacji usług przy użyciu Dockera.
-
-Projekt jest w trakcie realizacji – część funkcjonalności została już wdrożona, a pozostałe są zaplanowane do implementacji w kolejnych etapach.
+> **Status:** Work in progress — core services are running, backups and notifications are planned.
 
 ---
 
-## 2. Architektura systemu
+## What it does
 
-
-![Schemat Architektury Systemu](diagram_no_outer_background.png)
-
-
-### 2.1 Warstwa fizyczna i wirtualizacja
-
-* Komputer fizyczny (PC) pełni rolę hosta.
-* Na hoście uruchomiono środowisko wirtualizacji **VirtualBox**.
-* W VirtualBox działa maszyna wirtualna z systemem **Ubuntu Server 24.04 LTS**.
-* Karta sieciowa maszyny wirtualnej skonfigurowana jest w trybie **mostkowanym (Bridged)**, dzięki czemu serwer jest widoczny w sieci lokalnej (LAN) jako niezależne urządzenie.
-
-### 2.2 System operacyjny
-
-* Ubuntu Server 24.04 LTS
-* System pełni rolę hosta dla kontenerów Dockera oraz środowiska do uruchamiania skryptów automatyzujących.
+- **File storage** — upload and manage files through a web browser
+- **System monitoring** — track CPU, RAM, and disk usage with live dashboards
+- **Container management** — manage Docker containers through a web UI
+- **Backups** _(planned)_ — automated daily backups with cloud upload
+- **Notifications** _(planned)_ — alerts when disk space runs low
 
 ---
 
-## 3. Zdalny dostęp
+## Architecture
 
-* Zainstalowano i skonfigurowano **OpenSSH Server**.
-* Dostęp do serwera możliwy jest:
+![System Architecture](diagram_no_outer_background.png)
 
-  * z komputera (SSH),
-  * z telefonu przy użyciu aplikacji **Termius**.
-* Pozwala to na pełne zarządzanie serwerem bez fizycznego dostępu do maszyny.
+## How it's set up
 
----
+A physical PC runs VirtualBox, which hosts an Ubuntu Server 24.04 VM. The VM uses a bridged network adapter so it appears as a real device on the local network. All services run as Docker containers managed with Docker Compose.
 
-## 4. Konteneryzacja
-
-### 4.1 Docker Engine
-
-Docker Engine jest podstawowym komponentem odpowiedzialnym za:
-
-* uruchamianie i zatrzymywanie kontenerów,
-* zarządzanie obrazami,
-* obsługę sieci i wolumenów.
-
-Docker Engine wykorzystuje zasoby systemu hosta – kontenery nie posiadają własnej pamięci ani dysku.
-
-### 4.2 Docker Compose
-
-Docker Compose jest narzędziem wyższego poziomu służącym do definiowania i uruchamiania wielu usług jednocześnie przy użyciu pliku `docker-compose.yml`.
-
-Docker Compose:
-
-* opisuje usługi, sieci i wolumeny,
-* automatycznie tworzy wymagane zasoby,
-* uruchamia całą konfigurację jedną komendą.
-
-Docker Compose nie zastępuje Docker Engine – działa jako warstwa konfiguracyjna.
+Remote access is handled via SSH — from a laptop or phone using Termius.
 
 ---
 
-## 5. Usługi uruchomione w Dockerze
+## Services
 
-### 5.1 FileBrowser
+| Service | What it does | Port |
+|---|---|---|
+| FileBrowser | Web UI for managing files | 8080 |
+| Portainer | Web UI for managing Docker | 9443 |
+| Node Exporter | Collects system metrics | 9100 |
+| Prometheus | Stores and queries metrics | 9090 |
+| Grafana | Displays metrics as dashboards | 3000 |
 
-FileBrowser to usługa zapewniająca graficzny interfejs webowy (Web GUI) do zarządzania plikami na serwerze.
-
-Funkcje:
-
-* przesyłanie plików z komputera do serwera,
-* zarządzanie katalogami i plikami,
-* dostęp przez przeglądarkę w sieci LAN.
-
-Dane FileBrowsera zapisywane są przy użyciu wolumenów Dockera, które mapują katalog systemowy do wnętrza kontenera. Zapewnia to trwałość danych po restarcie kontenera lub serwera.
-
-### 5.2 Portainer
-
-Portainer to narzędzie umożliwiające graficzne zarządzanie kontenerami Dockera.
-
-Umożliwia:
-
-* podgląd uruchomionych kontenerów,
-* zarządzanie obrazami i wolumenami,
-* start i stop usług bez użycia linii poleceń.
-
-Wybrane parametry:
-
-* `restart: always` – kontener uruchamia się automatycznie po restarcie Dockera lub systemu.
-* `security_opt: no-new-privileges:true` – zwiększa bezpieczeństwo poprzez blokadę eskalacji uprawnień.
-
----
-
-## 6. Zarządzanie danymi i wolumeny
-
-Dane przechowywane są na hoście systemu Linux, a nie wewnątrz kontenerów.
-
-Przykładowe mapowanie wolumenu:
-
-* katalog hosta: `/opt/cloud/data`
-* katalog w kontenerze: `/data`
-
-Takie rozwiązanie:
-
-* zapewnia trwałość danych,
-* umożliwia wykonywanie backupów na poziomie systemu,
-* ułatwia migrację danych.
-
----
-
-## 7. Monitoring systemu
-
-### 7.1 Node Exporter
-
-Node Exporter zbiera dane o stanie systemu, m.in.:
-
-* użycie CPU,
-* pamięć RAM,
-* przestrzeń dyskowa.
-
-Metryki udostępniane są pod adresem:
+### How monitoring works
 
 ```
-http://localhost:9100/metrics
-```
-
-### 7.2 Prometheus
-
-Prometheus pobiera dane z Node Exportera i zapisuje je w swojej bazie danych.
-
-Dostęp do interfejsu Prometheusa:
-
-```
-http://localhost:9090
-```
-
-### 7.3 Grafana
-
-Grafana służy do wizualizacji danych dostarczanych przez Prometheusa.
-
-Umożliwia:
-
-* tworzenie dashboardów,
-* analizę zużycia zasobów w czasie rzeczywistym.
-
-Interfejs webowy:
-
-```
-http://localhost:3000
+System (CPU, RAM, disk)
+        ↓
+  Node Exporter        — reads system stats and exposes them
+        ↓
+    Prometheus         — scrapes and stores the data
+        ↓
+     Grafana           — visualizes everything as charts
 ```
 
 ---
 
-## 8. Automatyzacja
+## Project structure
 
-### 8.1 Lokalizacja skryptów
-
-* Skrypty systemowe: `/usr/local/bin`
-* Skrypty i konfiguracje usług dodatkowych: `/opt`
-
-### 8.2 Planowane skrypty
-
-* **Bash**
-
-  * automatyczny backup danych (raz dziennie),
-  * archiwizacja plików.
-
-* **Python**
-
-  * monitorowanie ilości wolnego miejsca na dysku,
-  * wysyłanie powiadomień na telefon,
-  * wysyłanie backupów do chmury.
-
----
-
-## 9. Backup danych
-
-Backupy danych:
-
-* wykonywane są na poziomie systemu hosta,
-* nie są przechowywane wyłącznie w kontenerach,
-* w kolejnych etapach projektu będą wysyłane do chmury.
-
-Takie podejście zwiększa bezpieczeństwo i niezależność danych od środowiska kontenerowego.
+```
+.
+├── docker-compose.yml
+├── .env                        # secrets (not in repo)
+├── filebrowser/
+│   ├── config/settings.json
+│   ├── data/                   # your files
+│   └── db/
+├── monitoring/
+│   ├── prometheus/
+│   │   └── prometheus.yml
+│   └── grafana/                # grafana data (not in repo)
+├── portainer/
+│   └── data/                   # portainer data (not in repo)
+├── backups/
+└── scripts/
+```
 
 ---
 
-## 10. Stan projektu
+## Getting started
 
-### Zrealizowane elementy
-
-* instalacja Ubuntu Server 24.04 LTS,
-* konfiguracja VirtualBox i sieci mostkowanej,
-* instalacja i konfiguracja OpenSSH,
-* dostęp z komputera i telefonu,
-* instalacja Dockera i Docker Compose,
-* uruchomienie FileBrowsera,
-* instalacja Portainera,
-* konfiguracja monitoringu: Node Exporter, Prometheus, Grafana.
-
-### Elementy planowane
-
-* skrypty backupowe w Bashu,
-* skrypty powiadomień w Pythonie,
-* backup do chmury,
+1. Clone the repo
+2. Create a `.env` file with your credentials:
+```env
+GF_SMTP_USER=your@email.com
+GF_SMTP_PASSWORD=your_password
+GF_SMTP_FROM_ADDRESS=your@email.com
+```
+3. Start everything:
+```bash
+docker compose up -d
+```
 
 ---
 
-## 11. Podsumowanie
+## What's done / what's next
 
-Projekt stanowi kompletną bazę pod domowy lub laboratoryjny serwer plików z funkcjami monitoringu i automatyzacji. Zastosowanie wirtualizacji i konteneryzacji pozwala na łatwą rozbudowę systemu oraz bezpieczne zarządzanie danymi. Kolejne etapy projektu skupią się na automatyzacji backupów i integracji z chmurą.
+**Done**
+- Ubuntu Server 24.04 + VirtualBox setup
+- Bridged networking
+- SSH access from laptop and phone
+- Docker + Docker Compose
+- FileBrowser, Portainer, Prometheus, Node Exporter, Grafana
+
+**Planned**
+- Bash scripts for daily backups
+- Python script to monitor disk space
+- Push notifications to phone
+- Automatic cloud backup upload
